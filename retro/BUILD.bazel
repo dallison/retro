@@ -1,0 +1,37 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "retro",
+    srcs = [
+        "app.cc",
+        "panel.cc",
+        "screen.cc",
+        "table.cc",
+        "table_window.cc",
+        "window.cc",
+        "dialog.cc",
+    ],
+    hdrs = [
+        "app.h",
+        "panel.h",
+        "screen.h",
+        "table.h",
+        "table_window.h",
+        "window.h",
+        "dialog.h",
+    ],
+    linkopts = [
+        "-lncurses",
+        "-lpanel",
+    ],
+    deps = [
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
+        "@coroutines//:co",
+        "@toolbelt//toolbelt",
+    ],
+)
+
