@@ -85,6 +85,8 @@ public:
     display_filter_ = filter;
   }
 
+  void DrawErrorBanner(const std::string& text);
+
 protected:
   friend class Panel;
   void PrintTitle() const;

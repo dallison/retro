@@ -73,4 +73,14 @@ void Window::VLine(int col) const {
   waddch(win_, ACS_BTEE);
 }
 
+  void Window::DrawErrorBanner(const std::string& text) {
+    EraseCanvas();
+    Draw(false);
+    int middle_row = Height() / 2;
+    int middle_col = Width() / 2;
+    PrintAt(middle_row, middle_col - text.size() / 2, text, kColorPairRed);
+    Refresh();
+  }
+
+
 } // namespace retro
