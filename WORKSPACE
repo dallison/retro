@@ -30,30 +30,30 @@ http_archive(
   sha256 = "755f9a39bc7205f5a0c428e920ddad092c33c8a1b46997def3f1d4a82aded6e1",
 )
 
-# http_archive(
-#   name = "toolbelt",
-#   urls = ["https://github.com/dallison/cpp_toolbelt/archive/refs/tags/1.1.1.tar.gz"],
-#   strip_prefix = "cpp_toolbelt-1.1.1",
-#   sha256 = "8c2a99448ea2776ffd400a4a85b5355c19f0506f4b4306cdeff67d1ba20474fb"
-# )
+http_archive(
+  name = "toolbelt",
+  urls = ["https://github.com/dallison/cpp_toolbelt/archive/refs/tags/1.1.5.tar.gz"],
+  strip_prefix = "cpp_toolbelt-1.1.5",
+  sha256 = "27429e66e47812da8c8bc18a823a27462277499029e9091be206f3844a7b05cc"
+)
 
 # For local debugging of toolbelt coroutine library.
-local_repository(
-    name = "toolbelt",
-    path = "../cpp_toolbelt",
-)
+# local_repository(
+#    name = "toolbelt",
+#    path = "../cpp_toolbelt",
+#)
 
-# http_archive(
-#   name = "coroutines",
-#   urls = ["https://github.com/dallison/co/archive/refs/tags/1.3.4.tar.gz"],
-#   strip_prefix = "co-1.3.4",
-#   sha256 = "00b036fcecd0256356bc09b47b049e29f6df34dc97792143630df83591de2c1b"
-# )
+http_archive(
+  name = "coroutines",
+  urls = ["https://github.com/dallison/co/archive/refs/tags/1.3.5.tar.gz"],
+  strip_prefix = "co-1.3.5",
+  sha256 = "132ec0f47008a10f43dbc3dea6c31db954ea6f808245127e99af80ffebb58768"
+)
 
 # For local debugging of co coroutine library.
-local_repository(
-    name = "coroutines",
-    path = "../co",
-)
+# local_repository(
+#     name = "coroutines",
+#     path = "../co",
+# )
 
 
