@@ -7,6 +7,7 @@
 #include "retro/screen.h"
 #include <string>
 #include <vector>
+#include <functional>
 
 namespace retro {
 
