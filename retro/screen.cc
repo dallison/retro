@@ -44,6 +44,7 @@ void Screen::Open() {
 void Screen::Close() {
   if (is_open_) {
     endwin();
+    is_open_ = false;
   }
 }
 

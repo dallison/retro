@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "co/coroutine_cpp20.h"
 #include "retro/panel.h"
 
 namespace retro {
@@ -15,6 +16,8 @@ public:
               const std::string &no);
 
   bool GetUserInput(const std::string &prompt, co::Coroutine *c);
+  co20::ValueTask<bool> GetUserInput(const std::string &prompt,
+                                     co20::Coroutine &c);
 
 private:
   std::string yes_;
@@ -28,6 +31,8 @@ public:
   InfoDialog(Screen *screen, WindowOptions opts, const std::string &ok);
 
   void WaitForUser(const std::vector<std::string> &text, co::Coroutine *c);
+  co20::ValueTask<void> WaitForUser(const std::vector<std::string> &text,
+                                    co20::Coroutine &c);
 
 private:
   std::string ok_;
@@ -39,6 +44,8 @@ public:
   UserInputDialog(Screen *screen, WindowOptions opts, const std::string &ok);
 
   std::string GetUserInput(const std::string &prompt, co::Coroutine *c);
+  co20::ValueTask<std::string> GetUserInput(const std::string &prompt,
+                                            co20::Coroutine &c);
 
 private:
   std::string ok_;
@@ -52,6 +59,8 @@ public:
                   const std::string &cancel);
 
   int GetSelection(const std::vector<std::string> &options, co::Coroutine *c);
+  co20::ValueTask<int> GetSelection(const std::vector<std::string> &options,
+                                    co20::Coroutine &c);
 
 private:
   std::string ok_;
