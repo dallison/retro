@@ -22,10 +22,16 @@ cc_library(
         "window.h",
         "dialog.h",
     ],
-    linkopts = [
-        "-lncurses",
-        "-lpanel",
-    ],
+    linkopts = select({
+        "@platforms//os:linux": [
+            "-lncursesw",
+            "-lpanelw",
+        ],
+        "//conditions:default": [
+            "-lncurses",
+            "-lpanel",
+        ],
+    }),
     copts = ["-std=c++20"],
     deps = [
         "@com_google_absl//absl/container:flat_hash_map",
