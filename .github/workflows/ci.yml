@@ -1,0 +1,75 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.mode }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60 # liberal upper bound to protect against tests stalling
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            mode: fastbuild
+            bazel_flags:
+          - os: ubuntu-latest
+            mode: opt
+            bazel_flags: -c opt
+          - os: ubuntu-24.04-arm
+            mode: fastbuild
+            bazel_flags:
+          - os: ubuntu-24.04-arm
+            mode: opt
+            bazel_flags: -c opt
+          - os: macos-latest
+            mode: fastbuild
+            bazel_flags: --config=apple_silicon
+          - os: macos-latest
+            mode: opt
+            bazel_flags: --config=apple_silicon -c opt
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install ncurses
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libncurses-dev
+
+      - name: Install Bazel
+        uses: bazel-contrib/setup-bazel@0.18.0
+        with:
+          # Avoid downloading Bazel every time.
+          bazelisk-cache: true
+          # Store build cache per workflow.
+          disk-cache: ${{ github.workflow }}-${{ matrix.os }}-${{ matrix.mode }}
+          # Share repository cache between workflows.
+          repository-cache: true
+
+      - name: Build all targets
+        run: |
+          bazel build //... \
+            --verbose_failures \
+            ${{ matrix.bazel_flags }}
+
+      - name: Run tests
+        run: |
+          bazel test \
+            //... \
+            --verbose_failures \
+            --test_output=errors \
+            ${{ matrix.bazel_flags }}
+
+      - name: Upload Bazel test logs
+        uses: actions/upload-artifact@v7
+        if: failure() # Upload artifacts only if a step failed
+        with:
+          name: bazel-test-logs-${{ matrix.os }}-${{ matrix.mode }}
+          path: bazel-testlogs
