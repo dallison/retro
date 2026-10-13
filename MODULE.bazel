@@ -1,5 +1,6 @@
 module(
     name = "retro",
+    version = "1.0.3"
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
