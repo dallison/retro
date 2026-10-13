@@ -13,4 +13,19 @@ void TableWindow::Run() {
       Scheduler(), [this](co::Coroutine *c) { RunnerCoroutine(c); }));
 }
 
+void Cpp20TableWindow::Run() {
+  Draw();
+  auto *app = dynamic_cast<Cpp20Application *>(&App());
+  if (app == nullptr) {
+    DrawErrorBanner("Cpp20TableWindow requires Cpp20Application");
+    return;
+  }
+  app->Spawn(
+      [this](co20::Coroutine &c) -> co20::Task {
+        co_await Runner(c);
+        co_return;
+      },
+      "retro-table-window");
+}
+
 } // namespace retro

@@ -5,6 +5,15 @@
 #include "retro/dialog.h"
 
 namespace retro {
+namespace {
+
+class CursorVisibilityGuard {
+public:
+  CursorVisibilityGuard() { curs_set(1); }
+  ~CursorVisibilityGuard() { curs_set(0); }
+};
+
+} // namespace
 
 YesNoDialog::YesNoDialog(Screen *screen, WindowOptions opts,
                          const std::string &yes, const std::string &no)
@@ -57,6 +66,50 @@ bool YesNoDialog::GetUserInput(const std::string &prompt, co::Coroutine *c) {
   }
 }
 
+co20::ValueTask<bool> YesNoDialog::GetUserInput(const std::string &prompt,
+                                                co20::Coroutine &c) {
+  int yes_col = Width() / 4;
+  int no_col = Width() * 3 / 4;
+  int prompt_row = 2;
+  int button_row = Height() - 2;
+
+  Draw(false);
+  PrintAt(prompt_row, (Width() - prompt.size()) / 2, prompt);
+  PrintAt(button_row, yes_col, yes_, kColorPairYesHighlight);
+  PrintAt(button_row, no_col, no_, kColorPairNo);
+  Refresh();
+
+  bool yes_selected = true;
+  for (;;) {
+    co_await c.Wait(STDIN_FILENO, POLLIN);
+    int ch = getch();
+    switch (ch) {
+    case KEY_RIGHT:
+    case KEY_LEFT:
+    case KEY_UP:
+    case KEY_DOWN:
+    case '\x09':
+      if (yes_selected) {
+        PrintAt(button_row, yes_col, yes_, kColorPairYes);
+        PrintAt(button_row, no_col, no_, kColorPairNoHighlight);
+      } else {
+        PrintAt(button_row, yes_col, yes_, kColorPairYesHighlight);
+        PrintAt(button_row, no_col, no_, kColorPairNo);
+      }
+      Refresh();
+      yes_selected = !yes_selected;
+      break;
+    case '\033':
+      Hide();
+      co_return false;
+    case '\n':
+    case '\r':
+      Hide();
+      co_return yes_selected;
+    }
+  }
+}
+
 InfoDialog::InfoDialog(Screen *screen, WindowOptions opts,
                        const std::string &ok)
     : Panel(screen, opts), ok_(ok) {}
@@ -88,6 +141,34 @@ void InfoDialog::WaitForUser(const std::vector<std::string> &text,
   }
 }
 
+co20::ValueTask<void>
+InfoDialog::WaitForUser(const std::vector<std::string> &text,
+                        co20::Coroutine &c) {
+  int ok_col = Width() / 2;
+  int text_row = 2;
+  int button_row = Height() - 2;
+
+  Draw(false);
+  for (const auto &t : text) {
+    PrintAt(text_row, 2, t);
+    text_row++;
+  }
+  PrintAt(button_row, ok_col, ok_, kColorPairOk);
+  Refresh();
+
+  for (;;) {
+    co_await c.Wait(STDIN_FILENO, POLLIN);
+    int ch = getch();
+    switch (ch) {
+    case '\033':
+    case '\n':
+    case '\r':
+      Hide();
+      co_return;
+    }
+  }
+}
+
 UserInputDialog::UserInputDialog(Screen *screen, WindowOptions opts,
                                  const std::string &ok)
     : Panel(screen, opts), ok_(ok) {}
@@ -99,7 +180,7 @@ std::string UserInputDialog::GetUserInput(const std::string &prompt,
   int button_row = Height() - 2;
   int input_row = 3;
 
-  curs_set(1);      // Cursor on.
+  CursorVisibilityGuard cursor_guard;
 
   Draw(false);
   PrintAt(prompt_row, 2, prompt);
@@ -118,7 +199,6 @@ std::string UserInputDialog::GetUserInput(const std::string &prompt,
       return "";
     case '\n':
     case '\r':
-      curs_set(0);
       return str;
     case 127:
     case 8:
@@ -148,6 +228,61 @@ std::string UserInputDialog::GetUserInput(const std::string &prompt,
         col++;
         break;
       }
+    }
+  }
+}
+
+co20::ValueTask<std::string>
+UserInputDialog::GetUserInput(const std::string &prompt, co20::Coroutine &c) {
+  int ok_col = Width() / 2;
+  int prompt_row = 2;
+  int button_row = Height() - 2;
+  int input_row = 3;
+
+  CursorVisibilityGuard cursor_guard;
+  Draw(false);
+  PrintAt(prompt_row, 2, prompt);
+  PrintAt(button_row, ok_col, ok_, kColorPairOk);
+  Move(input_row, 2);
+  Refresh();
+
+  std::string str;
+  int col = 2;
+  for (;;) {
+    co_await c.Wait(STDIN_FILENO, POLLIN);
+    int ch = getch();
+    switch (ch) {
+    case '\033':
+      co_return "";
+    case '\n':
+    case '\r':
+      co_return str;
+    case 127:
+    case 8:
+      if (str.empty()) {
+        beep();
+        break;
+      }
+      str.pop_back();
+      col--;
+      wmove(win_, input_row, col);
+      waddch(win_, ' ');
+      wmove(win_, input_row, col);
+      wrefresh(win_);
+      break;
+    default:
+      if (ch >= ' ' && ch < 127) {
+        if (col >= Width() - 2) {
+          beep();
+          break;
+        }
+        str += char(ch);
+        wmove(win_, input_row, col);
+        waddch(win_, ch);
+        wrefresh(win_);
+        col++;
+      }
+      break;
     }
   }
 }
@@ -228,6 +363,71 @@ int SelectionDialog::GetSelection(const std::vector<std::string> &options,
         return option_selected;
       }
       return -1;
+    }
+  }
+}
+
+co20::ValueTask<int>
+SelectionDialog::GetSelection(const std::vector<std::string> &options,
+                              co20::Coroutine &c) {
+  int ok_col = Width() / 4;
+  int cancel_col = Width() * 3 / 4;
+  int button_row = Height() - 2;
+
+  bool ok_selected = true;
+  int option_selected = 0;
+
+  auto redraw = [&]() {
+    Draw(false);
+    int options_row = 2;
+    int index = 0;
+    for (const auto &t : options) {
+      PrintAt(options_row, 2, t,
+              index == option_selected ? kColorPairSelected : kColorPairNormal);
+      options_row++;
+      index++;
+    }
+    PrintAt(button_row, ok_col, ok_,
+            ok_selected ? kColorPairYesHighlight : kColorPairYes);
+    PrintAt(button_row, cancel_col, cancel_,
+            ok_selected ? kColorPairNo : kColorPairNoHighlight);
+    Refresh();
+  };
+
+  redraw();
+  for (;;) {
+    co_await c.Wait(STDIN_FILENO, POLLIN);
+    int ch = getch();
+    switch (ch) {
+    case KEY_UP:
+      if (option_selected == 0) {
+        option_selected = options.size() - 1;
+      } else {
+        option_selected--;
+      }
+      redraw();
+      break;
+    case KEY_DOWN:
+    case '\x09':
+      if (option_selected == static_cast<int>(options.size()) - 1) {
+        option_selected = 0;
+      } else {
+        option_selected++;
+      }
+      redraw();
+      break;
+    case KEY_RIGHT:
+    case KEY_LEFT:
+      ok_selected = !ok_selected;
+      redraw();
+      break;
+    case '\033':
+      Hide();
+      co_return -1;
+    case '\n':
+    case '\r':
+      Hide();
+      co_return ok_selected ? option_selected : -1;
     }
   }
 }
